@@ -173,14 +173,14 @@ if __name__ == "__main__":
                             })
                 # save df to csv file called data.csv
                 csv = df.to_csv("output_data/data.csv", index=False)
-                # csv = df.to_csv(index=False).encode('utf-8')
-                # download_button.download_button(
-                #     label="Download CSV",
-                #     data=csv,
-                #     file_name="data.csv",
-                #     mime="text/csv",
-                #     icon=":material/download:",
-                # )
+                csv = df.to_csv(index=False).encode('utf-8')
+                download_button.download_button(
+                    label="Download CSV",
+                    data=csv,
+                    file_name="data.csv",
+                    mime="text/csv",
+                    icon=":material/download:",
+                )
             except Exception as e:
                 download_button.error(f"Error creating CSV file: {e}")
             st.toast("CSV file created successfully! Plotting...", icon="✅")

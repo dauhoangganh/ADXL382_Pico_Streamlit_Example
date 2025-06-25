@@ -1,5 +1,5 @@
 # Overview
-This repo contains programs written in Python to show the GUI for stepping motor fault prediction application. With this GUI, 4 seconds of the ADXL382 accelerometer sensor time-series  data is acquired, then pre-processed into FFT data. This FFT data is fed into a pretrained CNN model for fault classification.
+This repo contains programs written in Python to show the GUI for stepping motor fault prediction application. In the backend code, 4 seconds of the ADXL382 accelerometer sensor time-series  data is acquired, then pre-processed into FFT data. This FFT data is fed into a pretrained CNN model for fault classification.
 The time-series graph, FFT graph as well as the machine learning prediction are displayed on the GUI.
 <br>
 **Required hardwares:**

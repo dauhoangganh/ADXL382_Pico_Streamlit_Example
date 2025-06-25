@@ -33,4 +33,6 @@ After running *`streamlit run main.py`*, the following GUI will appear on your d
 After the completion of serial data transfer, you will see the time-series graph, FFT graph and the motor fault prediction result displayed on the GUI.
 You can use the slide bar to adjust the horizontal axis range of the graphs.
 <br>
-you can restart data acquisition by simply clicking **Start Data Acquisition** button on the GUI, no need to disconnect and reconnect Pico
+You can restart data acquisition by simply clicking **Start Data Acquisition** button on the GUI, no need to disconnect and reconnect Pico.
+<br>
+Time-series graph and FFT graph are automatically saved into [*`output_data`* folder](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/tree/main/output_data)

@@ -25,9 +25,12 @@ After running *`streamlit run main.py`*, the following GUI will appear on your d
 
 # Start data acquisition
 1. Connect ADXL382 to Pico as described in this [README.md](https://github.com/dauhoangganh/ADXL382_SPI_raspberry_pico/blob/main/README.md)
-2. Click **start Data Acquisition** button on the GUI
-3. Wait until the data transfer from Pico completes
+2. Connect Pico to your PC
+3. Click **Start Data Acquisition** button on the GUI
+4. Wait until the data transfer from Pico completes
 
 # Check the result
 After the completion of serial data transfer, you will see the time-series graph, FFT graph and the motor fault prediction result displayed on the GUI.
 You can use the slide bar to adjust the horizontal axis range of the graphs.
+<br>
+you can restart data acquisition by simply clicking **Start Data Acquisition** button on the GUI, no need to disconnect and reconnect Pico

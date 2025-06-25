@@ -9,7 +9,7 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 
 **Software:**
 1. The pretrained model *`best_model.keras`* found in folder *`model`* was trained on the data obtained from a specific stepping motor of the infusion pump. If you use a different motor with different set-up, you must prepare your own dataset, re-train the model/create your own ML model.
-   The code for data-processing, Ml model creation, evaluation can be found here. You can process your data and make your own ML model with the notebook template.
+   The code for data-processing, ML model creation & evaluation can be found here. You can process your data and make your own ML model with the notebook template.
   [stepping_motor_fault_classification_model.ipynb](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/blob/main/stepping_motor_fault_classification_model.ipynb)
 2. Flash adxl382_spi.uf2 file to pico. The adxl382_spi.uf2 file can be found [here](https://github.com/dauhoangganh/ADXL382_SPI_raspberry_pico/blob/main/build/adxl382_spi.uf2)
 

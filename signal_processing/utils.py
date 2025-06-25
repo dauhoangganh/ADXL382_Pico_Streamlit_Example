@@ -7,8 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import rfftfreq, rfft
 from sklearn.preprocessing import MinMaxScaler
-
-DURATION = 2 # Time-series duration in seconds
+from numba import njit
+DURATION = 4 # Time-series duration in seconds
 OUTPUT_DATA_DIR = Path('output_data')  # Directory to save output plots
 SAMPLE_RATE = 16000  # Original sample rate in Hz
 RESAMPLE_RATE = 1  # Resample rate used to desample the time-series
@@ -42,8 +42,8 @@ def time_plot(yf: list, start: int, stop: int, fname: str, y_range=None):
     ax[0].legend()
     ax[1].legend()
     ax[2].legend()
-    for label in (ax[2].get_xticklabels() + ax[2].get_yticklabels()):
-        label.set_fontsize(14)
+    # for label in (ax[2].get_xticklabels() + ax[2].get_yticklabels()):
+    #     label.set_fontsize(14)
 
     ax[2].set_xlabel("Time [s]", fontsize=16)
     if y_range:
@@ -53,9 +53,9 @@ def time_plot(yf: list, start: int, stop: int, fname: str, y_range=None):
     # Common y-axis label for the whole figure
     fig.text(0.04, 0.5, 'g value', va='center', rotation='vertical')
     plt.tight_layout(rect=[0.05, 0.05, 1, 0.95])  # leave space for common labels and title
-    ensure_output_dir_exists()
-    file_location = OUTPUT_DATA_DIR / Path(f'{fname}.png')
-    plt.savefig(file_location)
+    # ensure_output_dir_exists()
+    # file_location = OUTPUT_DATA_DIR / Path(f'{fname}.png')
+    # plt.savefig(file_location)
     return fig
 
 def fft_plot(yf: list, start=None, stop=None, fname='fft_plot'):
@@ -94,8 +94,8 @@ def fft_plot(yf: list, start=None, stop=None, fname='fft_plot'):
     ax[0].legend()
     ax[1].legend()
     ax[2].legend()
-    for label in (ax[2].get_xticklabels() + ax[2].get_yticklabels()):
-        label.set_fontsize(14)
+    # for label in (ax[2].get_xticklabels() + ax[2].get_yticklabels()):
+    #     label.set_fontsize(14)
     
     # Common x-axis label (at bottom subplot)
     ax[2].set_xlabel("Frequency (Hz)", fontsize=16)
@@ -104,9 +104,9 @@ def fft_plot(yf: list, start=None, stop=None, fname='fft_plot'):
     fig.text(0.04, 0.5, 'Signal strength', va='center', rotation='vertical')
     
     plt.tight_layout(rect=[0.05, 0.05, 1, 0.95])  # leave space for common labels and title
-    ensure_output_dir_exists
-    file_location = OUTPUT_DATA_DIR / Path(f'{fname}.png')
-    plt.savefig(file_location)
+    # ensure_output_dir_exists
+    # file_location = OUTPUT_DATA_DIR / Path(f'{fname}.png')
+    # plt.savefig(file_location)
     return fig, len(xf)
 
 def _dataScaler(data: list) -> list:
@@ -175,8 +175,21 @@ def _FFT(data: list) -> list:
     # print("Data FFT shape:", np.array(data_fft).shape)
     return np.stack(data_fft)
 
-def twos_complement_to_decimal(hex_str):
-    value = int(hex_str, 16)
-    if value & 0x8000:  # if the sign bit is set (for 16-bit numbers)
-        value -= 0x10000
-    return value
+# def twos_complement_to_decimal(hex_str):
+#     value = int(hex_str, 16)
+#     if value & 0x8000:  # if the sign bit is set (for 16-bit numbers)
+#         value -= 0x10000
+#     return value
+
+@njit
+def twos_complement_to_decimal_array(int_list):
+    output = []
+    for val in int_list:
+        if val & 0x8000:
+            val -= 0x10000
+        output.append(val* 500e-6)  # Convert to g value by scaling with ADXL382 scale factor
+    return output
+
+def hex_strings_to_int_array(hex_bytes_list):
+    # Decode hex strings and convert to int
+    return np.array([int(h.decode(), 16) for h in hex_bytes_list], dtype=np.uint16)

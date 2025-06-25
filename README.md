@@ -17,7 +17,8 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 1. Clone this repo to your local PC
 2. cd to the directory containing main.py in your PC
 3. Define SERIAL_PORT variable on line 27 of [main.py](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/blob/main/main.py) to the actual COM PORT associated with Pico when Pico is connected to your PC
-4. In the terminal, run *`streamlit run main.py`*
+4. in the terminal, run *`pip install -r requirements.txt`*
+5. In the terminal, run *`streamlit run main.py`*
 
 # GUI explanation
 After running *`streamlit run main.py`*, the following GUI will appear on your default browser

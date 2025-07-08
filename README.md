@@ -5,6 +5,10 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 **Required hardwares:**
 1. Raspberry Pi Pico
 2. ADXL382 accelerometer attached on the stepping motor inside an infusion pump
+![My Diagram](./images/connection.png)
+![My Diagram](./images/Image_(2).jpg)
+![My Diagram](./images/Image_3.jpg)
+
    
 
 **Software:**

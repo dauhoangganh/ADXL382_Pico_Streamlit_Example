@@ -6,7 +6,7 @@ import time
 import sys
 from signal_processing.serial_data_read import read_serial_data
 from signal_processing.fft_plot import plot_fft_data
-from signal_processing.utils import hex_strings_to_int_array, time_plot, SAMPLE_RATE, DURATION, twos_complement_to_decimal_array
+from signal_processing.utils import hex_strings_to_int_array, time_plot, SAMPLE_RATE, DURATION, RESAMPLE_RATE, twos_complement_to_decimal_array, _downSampler,  apply_wiener_filter, _dataScaler
 import streamlit as st
 import threading
 import queue
@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 from tensorflow.keras.models import load_model
 from pathlib import Path
+import joblib
 
 x_vals_q= queue.Queue()
 y_vals_q = queue.Queue()
@@ -23,6 +24,7 @@ z_vals_q = queue.Queue()
 messages_q = queue.Queue()
 progress_state = {"value": 0.0}
 done_event = Event()
+serial_thread = None    
 # === Serial Configuration ===
 SERIAL_PORT = 'COM6'        # Change this to your serial port
 BAUD_RATE = 2000000      # Match your device's baud rate
@@ -49,6 +51,7 @@ def load_data():
     return pd.read_csv("output_data/data.csv", header=0, names=['X', 'Y', 'Z'], dtype={'X': float, 'Y': float, 'Z': float})
 
 def render_fault_ui(placeholder=None):
+    conf = st.session_state.get('pred_confidence', 0.0) if st.session_state.get('pred_confidence', 0.0) > 0.5 else 0.0
     placeholder.html(f"""
         <html>
         <head>
@@ -63,11 +66,12 @@ def render_fault_ui(placeholder=None):
             }}
             .box {{
                 background-color: white;
-                border-radius: 1rem;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                padding: 1rem;
-                margin-bottom: 1rem;
+                border-radius: 1.5rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 0.5rem 0.5rem 0.5rem 0.5rem; 
+                margin-bottom: 0.5rem;
                 transition: box-shadow 0.3s ease;
+                text-align: center;
             }}
             .box:hover {{
                 box-shadow: 0 6px 12px rgba(0,0,0,0.15);
@@ -76,6 +80,7 @@ def render_fault_ui(placeholder=None):
                 color: #1f2937;
                 font-size: 1.125rem;
                 font-weight: 500;
+                margin: 0;
             }}
             .highlight {{
                 background-color: #fef3c7;
@@ -85,13 +90,17 @@ def render_fault_ui(placeholder=None):
         </head>
         <body>
         <div class="container">
-            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 0 else ''}"><p class="text">Normal state</p></div>
-            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 1 else ''}"><p class="text">Fault 1</p></div>
-            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 2 else ''}"><p class="text">Fault 2</p></div>
-            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 3 else ''}"><p class="text">Fault 3</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 0 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Normal state</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 1 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Slow rate</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 2 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Fast rate</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 3 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Stop</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 4 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Finger obstruction</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 5 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Unbalanced pump</p></div>
+            <div class="box {'highlight' if 'highlighted_state' in st.session_state and st.session_state['highlighted_state'] == 6 and st.session_state.get('pred_confidence', 0.0) > 0.5 else ''}"><p class="text">Occlusion</p></div>
+            <div class="box {'highlight' if st.session_state.get('pred_confidence', 0.0) < 0.5 else ''}"><p class="text">Unknown</p></div>
         </div>
         <div class="container">
-            <span style="font-size: 1.5rem; font-weight: 500; color: #1f2937;  padding-top: 20px;">Score: {st.session_state.get('pred_confidence', 0.0):.3f}</span><br>
+            <span style="font-size: 1.5rem; font-weight: 500; color: #1f2937;  padding-top: 20px;">Score: {conf:.3f}</span><br>
         </div>
         </body>
         </html>
@@ -105,13 +114,26 @@ if __name__ == "__main__":
             os.remove("output_data/data.csv")
     except Exception as e:
         print(f"Error deleting existing data file: {e}")
-    model_path = Path('model/best_model.keras')
-    model = load_model(model_path)
+    
     st.set_page_config(
     page_title="Motor fault detection",
     page_icon="🏂",
     layout="wide"
     )
+    model_path = Path('model/best_model.keras')
+    scaler_path = Path('model/scaler.pkl')
+    #cache the model loading to avoid reloading it every time
+    @st.cache_resource
+    def load_model_cached():
+        if model_path.exists() and scaler_path.exists():
+            return load_model(model_path), joblib.load(scaler_path)
+        else:
+            raise FileNotFoundError(f"Model file not found at {model_path}")
+    
+    model, scaler = load_model_cached()
+    print("Model loaded successfully.")
+    
+    
     start_button = st.button("Start Data Acquisition")
     progress_bar = st.empty()
     download_button = st.empty()
@@ -129,6 +151,11 @@ if __name__ == "__main__":
         render_fault_ui(fault_ui_placeholder)
     if start_button:
         st.cache_data.clear()
+
+        st.session_state['highlighted_state'] = ""
+        st.session_state['pred_confidence'] = 0.0
+        with col[2]:
+            render_fault_ui(fault_ui_placeholder)
         #refresh all session_state variables
         if 'x_vals' in st.session_state:
             del st.session_state['x_vals']
@@ -141,9 +168,12 @@ if __name__ == "__main__":
         done_event.clear()
         # Start the background thread
         print("Starting background thread for serial data reading...")
-        thread = threading.Thread(target=background_serial_read)
-        thread.start()
-        t = time.time()
+        if serial_thread is None or not serial_thread.is_alive():
+            serial_thread = threading.Thread(target=background_serial_read, daemon=True)
+            serial_thread.start()
+            t = time.time()
+        else:
+            print("Background thread is already running.")
         while not done_event.is_set():
             # st.toast("Reading sensor data...", icon="🔄")
             progress_bar.progress(progress_state["value"]/100.0, text=f"Reading sensor data... {progress_state['value']:.1f}%")
@@ -188,8 +218,7 @@ if __name__ == "__main__":
             with col[0]:
                 try:
                     t = time.time()
-                    fig = time_plot([x_vals, y_vals, z_vals], 0 , len(x_vals), "time_plot")
-                    print(f'time taken to plot time data: {time.time() - t:.2f} seconds')
+                    fig = time_plot([x_vals, y_vals, z_vals], 0 , len(x_vals), "time_plot", n_noise_points=50) 
                     t = time.time()
                     plot_placeholder.pyplot(fig)
                     print(f'time taken to show plot on st: {time.time() - t:.2f} seconds')
@@ -202,21 +231,39 @@ if __name__ == "__main__":
                 else:
                     try:
                         t = time.time()
-                        fft_fig, len_xf, fft_data = plot_fft_data(x_vals, y_vals, z_vals)
+                        # Stack x,y,z time-series data into shape (64000, 3)
+                        dataset = np.stack((x_vals, y_vals, z_vals), axis=-1)  # shape: (64000, 3)
+
+                        # Add batch dimension to get shape (1, 64000, 3)
+                        dataset = np.expand_dims(dataset, axis=0)
+
+                        # Data Resampling
+                        sensor_data_resampled = _downSampler(dataset[:, 50:, : ], 0, RESAMPLE_RATE)
+
+                        #Noise removal
+                        sensor_data= apply_wiener_filter(sensor_data_resampled)
+
+                        #Scaling data
+                        scaler = joblib.load(scaler_path)
+                        sensor_data = _dataScaler(sensor_data, scaler)
+
+                        fft_fig, len_xf, max_xf, fft_data = plot_fft_data(dataset, n_noise_points=50, scaler=scaler)
                         fft_placeholder.pyplot(fft_fig)
                         print(f'time taken to plot FFT data: {time.time() - t:.2f} seconds')
                         st.session_state['fft_fig'] = fft_fig
                         st.session_state['len_xf'] = len_xf
+                        st.session_state['max_xf'] = max_xf
                     except Exception as e:
                         st.error(f"Error plotting FFT data: {e}")
             with col[2]:
                 if len(fft_data) > 0:
                     try:
                         # Predict using the ML model
-                        predictions = model.predict(fft_data)
+                        predictions = model.predict(sensor_data)
+                        print(f"Predictions: {predictions}")
                         #there is only one sample in fft_data so get the first prediction
                         predicted_classes = np.argmax(predictions, axis=1)[0]
-                        pred_confidence = np.max(predictions, axis=-1)[0]
+                        pred_confidence = round(np.max(predictions, axis=-1)[0],3)
                         
                         st.session_state['highlighted_state'] = predicted_classes
                         st.session_state['pred_confidence'] = pred_confidence
@@ -235,7 +282,7 @@ if __name__ == "__main__":
             with col[0]:
                 x_start, x_end = st.slider(
                     "Select X-axis range",
-                    0, len(x_vals), (0, len(x_vals)), step=1000
+                    0, int(len(x_vals)/SAMPLE_RATE), (0, int(len(x_vals)/SAMPLE_RATE)), step=1000
                 )
 
                 # Sliders for Y axis range (value range)
@@ -258,17 +305,22 @@ if __name__ == "__main__":
                 #     float(y_min_plot_3), float(y_max_plot_3), (float(y_min_plot_3), float(y_max_plot_3))
                 # )
 
-                # fig = time_plot([x_vals, y_vals, z_vals], x_start, x_end, "time_plot", y_range=[y_range_plot_1, y_range_plot_2, y_range_plot_3])
-                fig = time_plot([x_vals, y_vals, z_vals], x_start, x_end, "time_plot")
+                # fig = time_plot([x_vals, y_vals, z_vals], x_start, x_end, "time_plot", y_range=[y_range_plot_1, y_range_plot_2, y_range_plot_3], n_noise_points=50) 
+                fig = time_plot([x_vals, y_vals, z_vals], x_start, x_end, "time_plot", n_noise_points=50)
                 plot_placeholder.pyplot(fig)
             if len(x_vals) == SAMPLE_RATE*DURATION and len(y_vals) == SAMPLE_RATE*DURATION and len(z_vals) == SAMPLE_RATE*DURATION:
                 with col[1]:
                     x_start_fft, x_end_fft = st.slider(
                         "Select X-axis range",
-                        0, int(st.session_state['len_xf']/DURATION), (0, int(st.session_state['len_xf']/DURATION)), step=100
+                        0, int(st.session_state['max_xf']), (0, int(st.session_state['max_xf'])), step=500
                     )
-                    fft_fig, len_xf, fft_data = plot_fft_data(x_vals, y_vals, z_vals, start=x_start_fft*DURATION, stop=x_end_fft*DURATION)
+                    # Stack x,y,z time-series data into shape (32000, 3)
+                    dataset = np.stack((x_vals, y_vals, z_vals), axis=-1)  # shape: (32000, 3)
+
+                    # Add batch dimension to get shape (1, 32000, 3)
+                    dataset = np.expand_dims(dataset, axis=0)
+                    fft_fig, len_xf , max_xf, fft_data= plot_fft_data(dataset, start=int(x_start_fft/st.session_state['max_xf']*st.session_state['len_xf']), stop=int(x_end_fft/st.session_state['max_xf']*st.session_state['len_xf']), n_noise_points=50, scaler=scaler)
                     fft_placeholder.pyplot(fft_fig)
     except FileNotFoundError:
-        st.error("Data file not found. Please start data acquisition first.")
+        download_button.error("Data file not found. Please start data acquisition first.")
     

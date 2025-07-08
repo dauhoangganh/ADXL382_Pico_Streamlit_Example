@@ -1,14 +1,12 @@
 from .utils import  fft_plot, _downSampler, _FFT, _dataScaler, RESAMPLE_RATE
 import numpy as np
-def plot_fft_data(x_vals, y_vals, z_vals, start=None, stop=None):
+def plot_fft_data(dataset, start=None, stop=None, n_noise_points=0, scaler=None):  
     # Data Resampling
-    data_x_resampled = _downSampler([np.array(x_vals).reshape(-1, 1)], 0, RESAMPLE_RATE)
-    # print("Data_x_resampled", data_x_resampled.shape)
-    data_x_resampled_fft = _FFT(data_x_resampled)
-    # print("Data_x_resampled_fft", data_x_resampled_fft.shape) shape=(n_samples, n_freq_bins, n_features)
-    data_y_resampled = _downSampler([np.array(y_vals).reshape(-1, 1)], 0, RESAMPLE_RATE)
-    data_y_resampled_fft = _FFT(data_y_resampled)
-    data_z_resampled = _downSampler([np.array(z_vals).reshape(-1, 1)], 0, RESAMPLE_RATE)
-    data_z_resampled_fft = _FFT(data_z_resampled)
-    fig , lenxf = fft_plot([data_x_resampled_fft, data_y_resampled_fft, data_z_resampled_fft], start, stop, 'fft_normal')
-    return fig, lenxf, np.concatenate([data_x_resampled_fft, data_y_resampled_fft, data_z_resampled_fft], axis=-1)
+    dataset_resampled = _downSampler(dataset[:, n_noise_points:, : ], 0, RESAMPLE_RATE)
+    #FFT Transformation
+    dataset_resampled_fft = _FFT(dataset_resampled)
+    # Data Scaling
+    dataset_resampled_fft_scaled = _dataScaler(dataset_resampled_fft, scaler)
+    # Plotting
+    fig, lenxf , max_xf = fft_plot(dataset_resampled_fft_scaled, start, stop, 'fft_normal')
+    return fig, lenxf, max_xf, dataset_resampled_fft_scaled

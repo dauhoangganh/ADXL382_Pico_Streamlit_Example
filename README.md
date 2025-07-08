@@ -25,7 +25,7 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 
 # GUI explanation
 After running *`streamlit run main.py`*, the following GUI will appear on your default browser
-![Initial GUI](images/Screenshot.jpeg)
+![Initial GUI](images/Screenshot.png)
 
 # Start data acquisition
 1. Connect ADXL382 to Pico as described in this [README.md](https://github.com/dauhoangganh/ADXL382_SPI_raspberry_pico/blob/main/README.md)

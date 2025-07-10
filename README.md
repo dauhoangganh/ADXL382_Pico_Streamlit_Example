@@ -20,7 +20,7 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 If you re-trained the model, make sure to save it into folder *`model`* and name the model *`best_model.keras`*.
 You can modify the GUI display to show your fault classes by changing label numbers from line 93-103 in *`main.py`* .
 
-![Initial GUI](images/Screenshot-GUI.png)
+![label GUI](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/blob/main/images/Screenshot%202025-07-10%20135424.png))
 
 # How to run main.py
 1. Clone this repo to your local PC

@@ -10,14 +10,14 @@ The time-series graph, FFT graph as well as the machine learning prediction are 
 ![My Diagram](./images/Image_3.jpg)
 
    
-
 **Software:**
 1. The pretrained model *`best_model.keras`* found in folder *`model`* was trained on the data obtained from a specific stepping motor of the infusion pump. If you use a different motor with different set-up, you must prepare your own dataset, re-train the model/create your own ML model.
    The code for data-processing, ML model creation & evaluation can be found here [CNN_LSTM_stepping_motor_fault_classification_2.ipynb](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/blob/main/CNN_LSTM_stepping_motor_fault_classification_2.ipynb). You can process your data and make your own ML model with the notebook template. The model used here is CNN-LSTM inspired from this [repo](https://github.com/Xiaohan-Chen/bear_fault_diagnosis/blob/master/cnn_lstm_model.ipynb) <br>
 2. Flash adxl382_spi.uf2 file to pico. The adxl382_spi.uf2 file can be found [here](https://github.com/dauhoangganh/ADXL382_SPI_raspberry_pico/blob/main/build/adxl382_spi.uf2)
 <br>
-**Note** <br>
-If you re-trained the model, make sure to save it into folder *`model`* and name the model *`best_model.keras`*.
+
+**Note** 
+If you re-trained the model, make sure to save it into folder *`model`* and name the model *`best_model.keras`* .
 You can modify the GUI display to show your fault classes by changing label numbers from line 93-103 in *`main.py`* .
 
 ![label GUI](https://github.com/dauhoangganh/ADXL382_Pico_Streamlit_Example/blob/main/images/Screenshot%202025-07-10%20135424.png))
